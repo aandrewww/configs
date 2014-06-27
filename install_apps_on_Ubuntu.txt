@@ -1,0 +1,94 @@
+############################### DigitalOcean (for ubuntu) ###############################
+
+####### NGINX #######
+#
+
+# Install nginx
+sudo apt-get update
+sudo apt-get install nginx 
+
+# Open up the nginx configuration.
+sudo nano /etc/nginx/sites-available/example
+...
+
+# Activate the virtual host
+sudo ln -s /etc/nginx/sites-available/example /etc/nginx/sites-enabled/example
+
+# Additionally, delete the default nginx server block.
+sudo rm /etc/nginx/sites-enabled/default
+
+# sudo service nginx start/stop/restart
+
+####### APACHE #######
+#
+
+# Install apache
+sudo apt-get update
+sudo apt-get install apache2
+
+# Open up the apache configuration and edit Port
+sudo nano /etc/apache2/ports.conf
+
+a2enmod rewrite
+
+# Go to /etc/apache2/sites-available find and edit 000-default.conf ()
+
+# sudo service apache2 start/stop/restart
+
+####### PHP #######
+#
+
+# Install PHP and php dependencies
+sudo apt-get update
+sudo apt-get install php5-fpm libapache2-mod-php5 php5-mcrypt
+
+#sudo service php5-fpm restart
+
+####### MongoDB #######
+#
+
+# First import public key of 10gen repository in our system
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+
+# Lets add 10 gen MongoDB APT repository url in /etc/apt/sources.list.d/mongodb.list.
+echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list
+
+#Install MongoDB
+sudo apt-get update
+sudo apt-get install mongodb-org
+
+# sudo service mongod start
+# sudo service mongod stop
+# mongo --version
+
+####### MySql #######
+#
+
+# Install mysql-server and php-mysql dependencies
+sudo apt-get install mysql-server libapache2-mod-auth-mysql php5-mysql
+sudo mysql_install_db
+
+# Finish up by running the MySQL set up script:
+sudo /usr/bin/mysql_secure_installation
+
+####### phpMyAdmin #######
+#
+
+# Install phpMyAdmin
+sudo apt-get install phpmyadmin
+
+# After the installation has completed, add phpmyadmin to the apache configuration.
+sudo nano /etc/apache2/apache2.conf
+
+# Add the phpmyadmin config to the file.
+Include /etc/phpmyadmin/apache.conf
+
+# Restart apache
+sudo service apache2 restart
+
+####### cron #######
+#
+
+sudo apt-get update
+sudo apt-get install cron
+sudo service cron start/stop

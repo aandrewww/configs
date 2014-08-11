@@ -1,0 +1,149 @@
+#sample
+#request: http://dev.yellow-hedgehog.com/
+#template: /var/www/dev/public 
+
+#######################
+# NGINX Config
+#######################
+
+user www-data;
+worker_processes 2;
+
+error_log /var/log/nginx/error.log;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    access_log /var/log/nginx/access.log;
+
+    # log options
+    log_format main '$host: $remote_addr - $remote_user [$time_local] '
+    '"$request" $status $bytes_sent '
+    '"$http_referer" "$http_user_agent" '
+    '"$gzip_ratio"';
+
+    # nginx options
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65 20;
+
+    # fastcgi
+    #fastcgi_intercept_errors on;
+
+    server {
+        listen 80;
+
+        location / {
+            proxy_pass http://127.0.0.1:8080/;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+        }
+
+        set $domain $host;
+
+        # check one name domain for simple application
+        # if ($domain ~ "^(.[^.]*)\.com$") {
+          # set $domain $1;
+          # set $rootpath "${domain}";
+          # set $servername "${domain}.com";
+        # }
+
+        # check multi name domain to multi application
+        if ($domain ~ "^(.*)\.(.[^.]*)\.com$") {
+          set $subdomain $1;
+          # set $domain $2;
+          # set $rootpath "${domain}/${subdomain}/www/";
+          # set $servername "${subdomain}.${domain}.com";
+        }
+
+        # Static files location
+        location ~* \.(jpg|jpeg|gif|png|ico|css|zip|tgz|gz|rar|bz2|doc|xls|exe|pdf|ppt|txt|tar|mid|midi|wav|bmp|rtf|js|swf)$
+        {
+            if (!-d /var/www/$subdomain/public ) {
+                set $cur_host "default";
+                access_log '/var/log/nginx/default.log' main;
+            }
+            if (-d /var/www/$subdomain/public) {
+                set $cur_host $subdomain;
+                access_log '/var/log/nginx/host_access.log' main;
+            }
+            root /var/www/$cur_host/public;
+        }
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        location ~ /\.ht {
+            deny all;
+        }
+    }
+}
+
+
+
+#######################
+# Apache Config
+#######################
+
+NameVirtualHost *
+<VirtualHost *>
+  ServerName www.dev.yellow-hedgehog.com
+  ServerAdmin andrewww.avdeev@gmail.com
+  UseCanonicalName Off
+
+  VirtualDocumentRoot /var/www/%1/public
+  # php_admin_value auto_prepend_file /var/www/fix_doc_root.php 
+  # как вариант создать в /var/www файл fix_doc_root.php с содержимым <?$l = explode("/",$_SERVER['SCRIPT_FILENAME']);$DOCUMENT_ROOT = $_SERVER["DOCUMENT_ROOT"] = implode("/",Array( $l[0], $l[1], $l[2], $l[3], $l[4]));?> (иначе Апач отдаёт в скрипты неверный $_SERVER[«DOCUMENT_ROOT»])
+
+  DirectoryIndex index.php index.html index.htm
+  <Directory />
+    Options FollowSymLinks
+    AllowOverride All
+  </Directory>
+
+  <Directory /var/www/>
+    Options Indexes FollowSymLinks MultiViews
+    AllowOverride All
+    Order allow,deny
+    allow from all
+  </Directory>
+
+
+  ScriptAlias /cgi-bin/ /usr/lib/cgi-bin/
+  <Directory "/usr/lib/cgi-bin">
+    AllowOverride None
+    Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+    Order allow,deny
+    Allow from all
+  </Directory>
+
+  ErrorLog /var/log/apache2/error.log
+
+  # Possible values include: debug, info, notice, warn, error, crit,
+  # alert, emerg.
+  LogLevel warn
+
+  CustomLog /var/log/apache2/access.log combined
+  ServerSignature On
+
+  Alias /doc/ "/usr/share/doc/"
+  <Directory "/usr/share/doc/">
+    Options Indexes MultiViews FollowSymLinks
+    AllowOverride None
+    Order deny,allow
+    Deny from all
+    Allow from 127.0.0.0/255.0.0.0 ::1/128
+  </Directory>
+</VirtualHost>
+
+#AND.....
+# a2emod vhost_alias 
+#
